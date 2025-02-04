@@ -43,6 +43,7 @@ export default function TweetGenerator() {
         setTweets(response.tweets)
       }
     } catch (err) {
+      console.log("Error on form submission", err)
       setError("An unexpected error occurred. Please try again.")
     } finally {
       setIsLoading(false)
