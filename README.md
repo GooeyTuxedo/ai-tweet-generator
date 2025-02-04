@@ -1,4 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Tweet Generator
+
+## Description
+
+AI Tweet Generator is a web application built with Next.js, TypeScript, and Tailwind CSS that leverages AI to generate engaging Twitter posts. This project demonstrates the integration of modern web technologies with AI capabilities.
+
+## Features
+
+- Generate AI-powered tweets based on user input
+- Customizable tweet types (Statement, Question, Opinion, Announcement)
+- Real-time character counter for generated tweets
+- Responsive design with a clean, modern UI
+- Form validation and error handling
+- Loading animations for better user experience
+- Supports both OpenAI API and local Ollama server for AI generation
+
+## Tech Stack
+
+- Next.js 15 (App Router)
+- TypeScript
+- Tailwind CSS
+- shadcn/ui components
+- React Hook Form
+- Framer Motion for animations
+- OpenAI API / Ollama (for local AI)
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v18 or later)
+- npm or yarn
+- OpenAI API key or Ollama server (for local AI)
 
 ## Getting Started
 
