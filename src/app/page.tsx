@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useForm, type SubmitHandler, Controller } from "react-hook-form"
 import { Bookmark, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -10,31 +11,38 @@ import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { TweetRequest, TweetType } from "@/types/tweet"
 import { generateTweets } from "./actions"
+import { Spinner } from "@/components/ui/spinner"
 
 export default function TweetGenerator() {
   const [isLoading, setIsLoading] = useState(false)
   const [tweets, setTweets] = useState<string[]>([])
   const [error, setError] = useState<string>("")
+  const {
+    control,
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<TweetRequest>({
+    defaultValues: {
+      type: "Statement", // Set a default value for the tweet type
+    },
+  })
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const onSubmit: SubmitHandler<TweetRequest> = async (data) => {
     setIsLoading(true)
     setError("")
 
-    const formData = new FormData(event.currentTarget)
-    const data: TweetRequest = {
-      instructions: formData.get("instructions") as string,
-      topic: formData.get("topic") as string,
-      type: formData.get("type") as TweetType,
-    }
-
-    const response = await generateTweets(data)
-    setIsLoading(false)
-
-    if (response.error) {
-      setError(response.error)
-    } else {
-      setTweets(response.tweets)
+    try {
+      const response = await generateTweets(data)
+      if (response.error) {
+        setError(response.error)
+      } else {
+        setTweets(response.tweets)
+      }
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -59,12 +67,12 @@ export default function TweetGenerator() {
 
           <Card>
             <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="instructions">Custom Instructions</Label>
                   <Textarea
                     id="instructions"
-                    name="instructions"
+                    {...register("instructions")}
                     placeholder="Add any custom writing instructions that will be applied to all generations..."
                     className="min-h-[100px]"
                   />
@@ -72,20 +80,40 @@ export default function TweetGenerator() {
 
                 <div className="space-y-2">
                   <Label htmlFor="topic">Topic</Label>
-                  <Input id="topic" name="topic" placeholder="Enter your topic..." required />
+                  <Input
+                    id="topic"
+                    {...register("topic", { required: "Topic is required" })}
+                    placeholder="Enter your topic..."
+                  />
+                  {errors.topic && <p className="text-red-500 text-sm">{errors.topic.message}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label>Tweet Type</Label>
-                  <ToggleGroup type="single" defaultValue="Statement" className="justify-start">
-                    <ToggleGroupItem value="Statement">Statement</ToggleGroupItem>
-                    <ToggleGroupItem value="Question">Question</ToggleGroupItem>
-                    <ToggleGroupItem value="Opinion">Opinion</ToggleGroupItem>
-                    <ToggleGroupItem value="Announcement">Announcement</ToggleGroupItem>
-                  </ToggleGroup>
+                  <Controller
+                    name="type"
+                    control={control}
+                    rules={{ required: "Tweet type is required" }}
+                    render={({ field }) => (
+                      <ToggleGroup
+                        type="single"
+                        value={field.value}
+                        onValueChange={(value) => field.onChange(value as TweetType)}
+                        className="justify-start"
+                      >
+                        {["Statement", "Question", "Opinion", "Announcement"].map((type) => (
+                          <ToggleGroupItem key={type} value={type}>
+                            {type}
+                          </ToggleGroupItem>
+                        ))}
+                      </ToggleGroup>
+                    )}
+                  />
+                  {errors.type && <p className="text-red-500 text-sm">{errors.type.message}</p>}
                 </div>
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? <Spinner className="mr-2" /> : null}
                   {isLoading ? "Generating..." : "Generate Tweets"}
                 </Button>
               </form>
@@ -110,4 +138,3 @@ export default function TweetGenerator() {
     </main>
   )
 }
-
