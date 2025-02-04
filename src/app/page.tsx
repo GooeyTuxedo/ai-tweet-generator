@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useForm, type SubmitHandler, Controller } from "react-hook-form"
 import { Bookmark, Settings } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,6 +13,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { TweetRequest, TweetType } from "@/types/tweet"
 import { generateTweets } from "./actions"
 import { Spinner } from "@/components/ui/spinner"
+import { CharacterCounter } from "@/components/ui/character-counter"
 
 export default function TweetGenerator() {
   const [isLoading, setIsLoading] = useState(false)
@@ -24,13 +26,14 @@ export default function TweetGenerator() {
     formState: { errors },
   } = useForm<TweetRequest>({
     defaultValues: {
-      type: "Statement", // Set a default value for the tweet type
+      type: "Statement",
     },
   })
 
   const onSubmit: SubmitHandler<TweetRequest> = async (data) => {
     setIsLoading(true)
     setError("")
+    setTweets([])
 
     try {
       const response = await generateTweets(data)
@@ -48,9 +51,14 @@ export default function TweetGenerator() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <div className="container flex justify-center">
+      <div className="flex justify-center">
         <div className="w-full max-w-2xl py-10">
-          <div className="flex items-center justify-between mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex items-center justify-between mb-8"
+          >
             <div>
               <h1 className="text-2xl font-bold">AI Tweet Generator</h1>
               <p className="text-muted-foreground">Generate engaging Twitter posts with AI</p>
@@ -63,7 +71,7 @@ export default function TweetGenerator() {
                 <Settings className="h-5 w-5" />
               </Button>
             </div>
-          </div>
+          </motion.div>
 
           <Card>
             <CardContent className="pt-6">
@@ -118,19 +126,47 @@ export default function TweetGenerator() {
                 </Button>
               </form>
 
-              {error && <div className="mt-4 p-4 text-red-600 bg-red-50 rounded-md">{error}</div>}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-4 p-4 text-red-600 bg-red-50 rounded-md"
+                  >
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-              {tweets.length > 0 && (
-                <div className="mt-6 space-y-4">
-                  {tweets.map((tweet, index) => (
-                    <Card key={index}>
-                      <CardContent className="p-4">
-                        <p>{tweet}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+              <AnimatePresence>
+                {tweets.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-6 space-y-4"
+                  >
+                    {tweets.map((tweet, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                      >
+                        <Card>
+                          <CardContent className="p-4">
+                            <p>{tweet}</p>
+                            <CharacterCounter text={tweet} limit={280} />
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </CardContent>
           </Card>
         </div>

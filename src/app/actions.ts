@@ -39,9 +39,11 @@ export async function generateTweets(data: TweetRequest): Promise<TweetResponse>
         }),
       })
       const result = await response.json()
+      console.log("openai returned result: ", result)
       return { tweets: [result.choices[0].message.content] }
     }
   } catch (error) {
+    console.log("error generating tweet: ", error)
     return { tweets: [], error: "Failed to generate tweet" }
   }
 }
