@@ -44,7 +44,7 @@ export default function TweetGenerator() {
         textContent = `${textContent}${delta}`
         setStreamedTweet(textContent)
       }
-    } catch (err) {
+    } catch (err) { /* eslint-disable-line @typescript-eslint/no-unused-vars */
       setError("An unexpected error occurred. Please try again.")
     } finally {
       setIsLoading(false)
