@@ -1,50 +1,46 @@
 "use server"
 
-import type { TweetRequest, TweetResponse } from "@/types/tweet"
+import type { TweetRequest } from "@/types/tweet"
+import { streamText } from "ai"
+import { createOpenAI } from "@ai-sdk/openai"
+import { createStreamableValue } from "ai/rsc"
 
-export async function generateTweets(data: TweetRequest): Promise<TweetResponse> {
-  try {
-    const isOllama = process.env.USE_OLLAMA === "true"
-    const apiUrl = isOllama ? "http://localhost:11434/api/generate" : "https://api.openai.com/v1/chat/completions"
+const { USE_OLLAMA, OPENAI_API_KEY } = process.env;
 
-    const prompt = `Generate a tweet about "${data.topic}". 
-      The tweet should be in the style of a "${data.type}".
-      Additional instructions: ${data.instructions}
-      Keep it under 280 characters.`
+// Create a configurable AI client
+const aiClient = createOpenAI({
+  baseURL: USE_OLLAMA === "true" ? "http://localhost:11434/v1" : "https://api.openai.com/v1",
+  apiKey:
+    USE_OLLAMA === "true"
+      ? "ollama" // Ollama doesn't require an API key, but we need to provide a non-empty string
+      : OPENAI_API_KEY,
+})
 
-    if (isOllama) {
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "tinyllama",
-          prompt: prompt,
-          stream: false,
-        }),
-      })
-      const result = await response.json()
-      return { tweets: [result.response] }
-    } else {
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.7,
-          max_tokens: 100,
-        }),
-      })
-      const result = await response.json()
-      console.log("openai returned result: ", result)
-      return { tweets: [result.choices[0].message.content] }
+export type Message = {
+  role: "user" | "assistant"
+  content: string
+}
+
+export async function generateTweet(data: TweetRequest) {
+  const stream = createStreamableValue("")
+
+  const prompt = `Generate a tweet about "${data.topic}". 
+    The tweet should be in the style of a "${data.type}".
+    Additional instructions: ${data.instructions}
+    Keep it under 280 characters.`
+  ;(async () => {
+    const { textStream } = streamText({
+      model: aiClient(USE_OLLAMA === "true" ? "tinyllama" : "gpt-4o-mini"),
+      messages: [{ role: "user", content: prompt }],
+    })
+
+    for await (const delta of textStream) {
+      stream.update(delta)
     }
-  } catch (error) {
-    console.log("error generating tweet: ", error)
-    return { tweets: [], error: "Failed to generate tweet" }
-  }
+
+    stream.done()
+  })()
+
+  return { output: stream.value }
 }
 

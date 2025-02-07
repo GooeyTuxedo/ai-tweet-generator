@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useForm, type SubmitHandler, Controller } from "react-hook-form"
 import { Bookmark, Settings } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { readStreamableValue } from "ai/rsc"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,13 +12,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { TweetRequest, TweetType } from "@/types/tweet"
-import { generateTweets } from "./actions"
+import { generateTweet } from "./actions"
 import { Spinner } from "@/components/ui/spinner"
 import { CharacterCounter } from "@/components/ui/character-counter"
 
 export default function TweetGenerator() {
   const [isLoading, setIsLoading] = useState(false)
-  const [tweets, setTweets] = useState<string[]>([])
+  const [streamedTweet, setStreamedTweet] = useState("")
   const [error, setError] = useState<string>("")
   const {
     control,
@@ -33,17 +34,17 @@ export default function TweetGenerator() {
   const onSubmit: SubmitHandler<TweetRequest> = async (data) => {
     setIsLoading(true)
     setError("")
-    setTweets([])
+    setStreamedTweet("")
 
     try {
-      const response = await generateTweets(data)
-      if (response.error) {
-        setError(response.error)
-      } else {
-        setTweets(response.tweets)
+      const { output } = await generateTweet(data)
+
+      let textContent = ""
+      for await (const delta of readStreamableValue(output)) {
+        textContent = `${textContent}${delta}`
+        setStreamedTweet(textContent)
       }
     } catch (err) {
-      console.log("Error on form submission", err)
       setError("An unexpected error occurred. Please try again.")
     } finally {
       setIsLoading(false)
@@ -52,7 +53,7 @@ export default function TweetGenerator() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <div className="flex justify-center">
+      <div className="container flex justify-center">
         <div className="w-full max-w-2xl py-10">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -123,7 +124,7 @@ export default function TweetGenerator() {
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? <Spinner className="mr-2" /> : null}
-                  {isLoading ? "Generating..." : "Generate Tweets"}
+                  {isLoading ? "Generating..." : "Generate Tweet"}
                 </Button>
               </form>
 
@@ -142,29 +143,20 @@ export default function TweetGenerator() {
               </AnimatePresence>
 
               <AnimatePresence>
-                {tweets.length > 0 && (
+                {streamedTweet && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
-                    className="mt-6 space-y-4"
+                    className="mt-6"
                   >
-                    {tweets.map((tweet, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                      >
-                        <Card>
-                          <CardContent className="p-4">
-                            <p>{tweet}</p>
-                            <CharacterCounter text={tweet} limit={280} />
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    ))}
+                    <Card>
+                      <CardContent className="p-4">
+                        <p>{streamedTweet}</p>
+                        <CharacterCounter text={streamedTweet} limit={280} />
+                      </CardContent>
+                    </Card>
                   </motion.div>
                 )}
               </AnimatePresence>
